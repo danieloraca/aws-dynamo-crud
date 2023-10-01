@@ -6,7 +6,7 @@ on:
       - feature/GHA-test
     paths:
       - 'App/**'
-      - '.github/workflows/deploy-app-stage.yml'
+      - '.github/workflows/test.yml'
 
 defaults:
   run:
