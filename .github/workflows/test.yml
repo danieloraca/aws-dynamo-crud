@@ -1,0 +1,73 @@
+name: Deploy App Stage
+on:
+  push:
+    branches:
+      - stage
+      - feature/GHA-test
+    paths:
+      - 'App/**'
+      - '.github/workflows/deploy-app-stage.yml'
+
+defaults:
+  run:
+    working-directory: App
+
+jobs:
+  build-and-deploy:
+    name: Deploy Stage App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: |
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+#      - name: List Cache Directory
+#        run: ls -la ${{ env.NPM_CONFIG_CACHE }}
+#      - name: output...
+#        run: |
+#          echo "${{join(steps.cache-npm.outputs.*, '\n')}}"
+#
+#      - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+#        name: Cache not hit
+#        run: echo "Cache not hit"
+#
+#      - name: Set npm Cache Directory
+#        run: echo "NPM_CONFIG_CACHE=${{ runner.workspace }}/.npm" >> $GITHUB_ENV
+
+      - name: Install Dependencies
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm install
+
+#      - name: Run Tests
+#        run: npm run test-ci
+
+      - name: Build & Deploy
+        run: |
+          npm run build:stage
+          aws s3 sync ./dist s3://$WEB_BUCKET --delete --cache-control=max-age=31536000
+          aws s3 cp ./dist/index.html s3://$WEB_BUCKET/index.html --cache-control=max-age=0
+          aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRO --paths "/*"
+
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ENGAGE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ENGAGE_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'us-east-1'
+          WEB_BUCKET: gecko-events-portal-stage
+          CLOUDFRONT_DISTRO: E2BN5QGCTGH27I
