@@ -1,0 +1,25 @@
+name: Run App Tests
+on:
+  pull_request:
+    paths:
+      - 'App/**'
+      - '.github/workflows/test-app.yml'
+defaults:
+  run:
+    working-directory: App
+jobs:
+  test:
+    name: Run App Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        uses: ./.github/actions/InstallDependencies
+        id: cache-npm
+
+      - name: Run Tests
+        run: npm run test
