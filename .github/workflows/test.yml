@@ -22,4 +22,4 @@ jobs:
         id: cache-npm
 
       - name: Run Tests
-        run: npm run test-ci
+        run: npm run test
